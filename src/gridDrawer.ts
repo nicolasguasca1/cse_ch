@@ -98,12 +98,6 @@ function calculateXPositions(
       };
       //Push to drawRequests
       drawRequests[1].push(drawRequest);
-      // // Secondary diagonal
-      // drawRequests.push({
-      //   x: i,
-      //   y: end - (i - start),
-      //   character: characterType
-      // });
     }
   }
   return drawRequests;
