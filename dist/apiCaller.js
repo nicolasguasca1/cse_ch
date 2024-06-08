@@ -12,84 +12,73 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.makeDeleteApiCall = exports.getCurrentGrid = exports.makeApiCall = void 0;
+exports.PolyanetService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const config_1 = require("./config");
-// interface ApiResponse {
-//   map: {
-//     _id: string;
-//     content: Array<Array<{ type?: number } | null>>;
-//     candidateId: string;
-//   };
-// }
-function makeApiCall(drawRequest) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const postUrl = "https://challenge.crossmint.io/api/polyanets"; // Replace with the actual API endpoint
-        const headers = {
-            "Content-Type": "application/json"
-        };
-        let jsonRequest = JSON.stringify(drawRequest);
-        try {
-            const response = yield axios_1.default.post(postUrl, jsonRequest, { headers });
-            if (response.status === 200) {
-                const data = response.data;
-                console.log(`Successfully placed (${drawRequest.row}, ${drawRequest.column})`);
+class PolyanetService {
+    static makeApiCall(drawRequest) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.retry(() => __awaiter(this, void 0, void 0, function* () {
+                const response = yield axios_1.default.post(this.API_URL, drawRequest, {
+                    headers: this.HEADERS
+                });
+                if (response.status === 200) {
+                    console.log(`Successfully placed (${drawRequest.row}, ${drawRequest.column})`);
+                }
+                else {
+                    console.error(`Failed to place character: ${response.status}`);
+                }
+            }));
+        });
+    }
+    static makeDeleteApiCall(drawRequest) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.retry(() => __awaiter(this, void 0, void 0, function* () {
+                const response = yield axios_1.default.delete(this.API_URL, {
+                    data: drawRequest,
+                    headers: this.HEADERS
+                });
+                if (response.status === 200) {
+                    console.log(`Successfully deleted (${drawRequest.row}, ${drawRequest.column})`);
+                }
+                else {
+                    console.error(`Failed to delete character: ${response.status}`);
+                }
+            }));
+        });
+    }
+    static getCurrentGrid() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.retry(() => __awaiter(this, void 0, void 0, function* () {
+                const response = yield axios_1.default.get(this.MAP_URL);
+                if (response.status === 200) {
+                    return response.data.map.content;
+                }
+                else {
+                    throw new Error(`Failed to get current grid: ${response.status}`);
+                }
+            }));
+        });
+    }
+    static retry(fn_1) {
+        return __awaiter(this, arguments, void 0, function* (fn, retries = 3, delay = 1000) {
+            try {
+                return yield fn();
             }
-            else {
-                console.error(`Failed to place character: ${response.status}`);
+            catch (error) {
+                if (retries > 0) {
+                    console.warn(`Retrying... attempts left: ${retries - 1}`);
+                    yield new Promise((res) => setTimeout(res, delay));
+                    return this.retry(fn, retries - 1, delay);
+                }
+                else {
+                    throw error;
+                }
             }
-        }
-        catch (error) {
-            console.error(`Error making API call: ${error.message}`);
-        }
-    });
+        });
+    }
 }
-exports.makeApiCall = makeApiCall;
-function makeDeleteApiCall(drawRequest) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const deleteUrl = "https://challenge.crossmint.io/api/polyanets";
-        const headers = {
-            "Content-Type": "application/json"
-        };
-        let jsonRequest = JSON.stringify(drawRequest);
-        console.log("deleteRequest4", jsonRequest);
-        try {
-            const response = yield axios_1.default.delete(deleteUrl, {
-                data: jsonRequest,
-                headers
-            });
-            if (response.status === 200) {
-                const data = response.data;
-                console.log(`Successfully deleted (${drawRequest.row}, ${drawRequest.column})`);
-            }
-            else {
-                console.error(`Failed to delete character: ${response.status}`);
-            }
-        }
-        catch (error) {
-            console.error(`Error making delete API call: ${error.message}`);
-        }
-    });
-}
-exports.makeDeleteApiCall = makeDeleteApiCall;
-const apiUrl = "https://challenge.crossmint.io/api/map";
-function getCurrentGrid() {
-    return __awaiter(this, void 0, void 0, function* () {
-        // const url = `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}`;
-        try {
-            // const response = await axios.get<ApiResponse>(`${apiUrl}/${CANDIDATE_ID}`);
-            const response = yield axios_1.default.get(`${apiUrl}/${config_1.CANDIDATE_ID}`);
-            if (response.status === 200) {
-                return response.data.map.content;
-            }
-            else {
-                throw new Error(`Failed to get current grid: ${response.status}`);
-            }
-        }
-        catch (error) {
-            console.error(`Error getting current grid: ${error.message}`);
-            throw error;
-        }
-    });
-}
-exports.getCurrentGrid = getCurrentGrid;
+exports.PolyanetService = PolyanetService;
+PolyanetService.API_URL = "https://challenge.crossmint.io/api/polyanets";
+PolyanetService.MAP_URL = `https://challenge.crossmint.io/api/map/${config_1.CANDIDATE_ID}`;
+PolyanetService.HEADERS = { "Content-Type": "application/json" };
