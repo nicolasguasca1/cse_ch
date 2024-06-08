@@ -1,0 +1,20 @@
+import * as cron from "node-cron";
+import { makeApiCall } from "./apiCaller";
+import { DrawRequest } from "./apiCaller";
+
+// src/scheduler.ts
+const drawRequest: DrawRequest = {
+  character: "p",
+  row: 0,
+  column: 0
+};
+
+makeApiCall(drawRequest);
+
+// Schedule the job
+cron.schedule("*/10 * * * *", () => {
+  console.log("Making API call...");
+  makeApiCall(drawRequest);
+});
+
+console.log("Scheduler started."); // Log to indicate the scheduler is running

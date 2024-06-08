@@ -1,0 +1,27 @@
+{
+  "name": "coding_challenge",
+  "version": "1.0.0",
+  "author": "nicolasguasca1 <nicolas.guasca@gmail.com>",
+  "license": "MIT",
+  "main": "dist/gridDrawer.js",
+  "scripts": {
+    "start": "node dist/gridDrawer.js"
+  },
+  "dependencies": {
+    "@types/axios": "^0.14.0",
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "esm": "^3.2.25",
+    "inquirer": "^9.2.23",
+    "node-cron": "^3.0.3",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.14.2",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.2"
+  }
+}
