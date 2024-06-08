@@ -15,7 +15,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PolyanetService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const config_1 = require("./config");
+/**
+ * Service for interacting with the Polyanet API.
+ */
 class PolyanetService {
+    /**
+     * Makes an API call to create a Polyanet.
+     * @param drawRequest - The draw request object containing position and candidate information.
+     */
     static makeApiCall(drawRequest) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.retry(() => __awaiter(this, void 0, void 0, function* () {
@@ -31,6 +38,10 @@ class PolyanetService {
             }));
         });
     }
+    /**
+     * Makes an API call to delete a Polyanet.
+     * @param drawRequest - The draw request object containing position and candidate information.
+     */
     static makeDeleteApiCall(drawRequest) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.retry(() => __awaiter(this, void 0, void 0, function* () {
@@ -47,6 +58,10 @@ class PolyanetService {
             }));
         });
     }
+    /**
+     * Retrieves the current grid from the API.
+     * @returns A promise that resolves to a 2D array representing the current grid.
+     */
     static getCurrentGrid() {
         return __awaiter(this, void 0, void 0, function* () {
             return yield this.retry(() => __awaiter(this, void 0, void 0, function* () {
@@ -60,6 +75,13 @@ class PolyanetService {
             }));
         });
     }
+    /**
+     * Retries a function in case of failure.
+     * @param fn - The function to retry.
+     * @param retries - The number of retries.
+     * @param delay - The delay between retries in milliseconds.
+     * @returns A promise that resolves to the result of the function.
+     */
     static retry(fn_1) {
         return __awaiter(this, arguments, void 0, function* (fn, retries = 3, delay = 1000) {
             try {

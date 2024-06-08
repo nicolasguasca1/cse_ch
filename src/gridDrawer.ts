@@ -6,17 +6,33 @@ type CharacterType = "p" | "s" | "c";
 const GRID_SIZE = 11;
 const DELAY_MS = 1000;
 
+/**
+ * Manager for grid operations including drawing and deleting positions.
+ */
 class GridManager {
   private static readonly GRID_SIZE = GRID_SIZE;
   private static readonly DELAY_MS = DELAY_MS;
 
+  /**
+   * Delays execution for a specified number of milliseconds.
+   * @param ms - The number of milliseconds to delay.
+   * @returns A promise that resolves after the specified delay.
+   */
   static async delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  static calculateDeletePositions(
-    currentGrid: (string | null)[][]
-  ): DrawRequest[] {
+  /**
+   * Calculates positions to draw and delete in the grid.
+   * @param currentGrid - The current grid state.
+   * @param characterType - The type of character to draw.
+   * @returns An object containing arrays of draw requests and delete requests.
+   */
+  static calculateDrawAndDeletePositions(
+    currentGrid: (string | null)[][],
+    characterType: CharacterType
+  ): { drawRequests: DrawRequest[]; deleteRequests: DrawRequest[] } {
+    const drawRequests: DrawRequest[] = [];
     const deleteRequests: DrawRequest[] = [];
     const start = 2;
     const end = 8;
@@ -24,8 +40,18 @@ class GridManager {
     for (let i = 0; i < currentGrid.length; i++) {
       for (let j = 0; j < currentGrid[i].length; j++) {
         if (i >= start && i <= end && (i === j || j === end - (i - start))) {
-          continue; // These positions are part of the X pattern
+          // These positions are part of the X pattern
+          if (currentGrid[i][j] === null) {
+            let drawRequest = {
+              _id: MAP_ID,
+              row: i,
+              column: j,
+              candidateId: CANDIDATE_ID
+            };
+            drawRequests.push(drawRequest);
+          }
         } else if (currentGrid[i][j] !== null) {
+          // These positions should be empty
           let deleteRequest = {
             _id: MAP_ID,
             row: i,
@@ -33,65 +59,32 @@ class GridManager {
             candidateId: CANDIDATE_ID
           };
           deleteRequests.push(deleteRequest);
-          console.log("Delete request:", deleteRequest);
         }
       }
     }
-    return deleteRequests;
-  }
-
-  static calculateXPositions(
-    characterType: CharacterType,
-    currentGrid: (string | null)[][]
-  ): DrawRequest[][] {
-    const drawRequests: DrawRequest[][] = [[], []];
-    const start = 2;
-    const end = 8;
-
-    for (let i = start; i <= end; i++) {
-      if (currentGrid[i][i] == null) {
-        let drawRequest = {
-          _id: MAP_ID,
-          row: i,
-          column: i,
-          candidateId: CANDIDATE_ID
-        };
-        drawRequests[0].push(drawRequest);
-      }
-      if (currentGrid[i][end - (i - start)] == null) {
-        let drawRequest = {
-          _id: MAP_ID,
-          row: i,
-          column: end - (i - start),
-          candidateId: CANDIDATE_ID
-        };
-        drawRequests[1].push(drawRequest);
-      }
-    }
-    return drawRequests;
+    return { drawRequests, deleteRequests };
   }
 }
 
+/**
+ * Main function to manage the grid operations.
+ */
 async function main(): Promise<void> {
   try {
     const currentGrid = await PolyanetService.getCurrentGrid();
     const characterType: CharacterType = "p";
 
-    const deleteRequests = GridManager.calculateDeletePositions(currentGrid);
+    const { drawRequests, deleteRequests } =
+      GridManager.calculateDrawAndDeletePositions(currentGrid, characterType);
+
     for (const request of deleteRequests) {
       await PolyanetService.makeDeleteApiCall(request);
       await GridManager.delay(DELAY_MS);
     }
 
-    const drawRequests = GridManager.calculateXPositions(
-      characterType,
-      currentGrid
-    );
-    for (const subarray of drawRequests) {
-      for (const request of subarray) {
-        await PolyanetService.makeApiCall(request);
-        await GridManager.delay(DELAY_MS);
-      }
+    for (const request of drawRequests) {
+      await PolyanetService.makeApiCall(request);
+      await GridManager.delay(DELAY_MS);
     }
   } catch (error) {
     console.error(`Error: ${(error as Error).message}`);
