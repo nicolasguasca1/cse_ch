@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MegaverseService = void 0;
 const axios_1 = __importDefault(require("axios"));
@@ -19,38 +20,16 @@ const config_1 = require("./config");
  * Service for interacting with the Polyanet API.
  */
 class MegaverseService {
-    // // Type guard function to check if the parameter is of the type DrawSoloonRequest
-    // static isDrawSoloon(
-    //   request: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest
-    // ): request is DrawPolyanetRequest {
-    //   return (
-    //     (request as DrawSoloonRequest).color !== undefined &&
-    //     (request as DrawSoloonRequest).row !== undefined &&
-    //     (request as DrawSoloonRequest).column !== undefined
-    //   );
-    // }
-    // // Type guard function to check if the parameter is of the type DrawComethRequest
-    // static isDrawCometh(
-    //   request: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest
-    // ): request is DrawPolyanetRequest {
-    //   return (
-    //     (request as DrawComethRequest).direction !== undefined &&
-    //     (request as DrawComethRequest).row !== undefined &&
-    //     (request as DrawComethRequest).column !== undefined
-    //   );
-    // }
     /**
-     * Checks if a certain value already exists in the given position.
-     * @param position - The position to check.
-     * @returns A boolean indicating whether the position is already occupied.
+     * Check if a specific position is occupied.
+     * @param type - The type of object to check.
+     * @param shapeReq - The request data containing row and column.
+     * @param mapData - The current map data.
+     * @returns A promise that resolves to a boolean indicating if the position is occupied.
      */
     static isOccupied(type, shapeReq, mapData) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            // Implement the logic here to check if the position is occupied
-            // This could involve making another API call or querying a database
-            // For demonstration purposes, let's assume it always returns false
-            // currentGrid = getCurrentGrid();
+            var _b;
             const { row, column } = shapeReq;
             if (row === null ||
                 column === null ||
@@ -60,7 +39,7 @@ class MegaverseService {
             }
             // const row = shapeReq.row;
             // const column = shapeReq.column;
-            const typeGrid = (_a = mapData.content[row][column]) === null || _a === void 0 ? void 0 : _a.type;
+            const typeGrid = (_b = mapData.content[row][column]) === null || _b === void 0 ? void 0 : _b.type;
             if (type === 0 && typeGrid === 0) {
                 console.log(`Skipping...position already has a Polyanet: (${row}, ${column})`);
                 return true;
@@ -74,7 +53,7 @@ class MegaverseService {
                 return true;
             }
             else if (type === null && typeGrid === null) {
-                console.log(`Skipping...position already has a Cometh: (${row}, ${column})`);
+                console.log(`Skipping...position already has a Space: (${row}, ${column})`);
                 return true;
             }
             else {
@@ -82,6 +61,10 @@ class MegaverseService {
             }
         });
     }
+    /**
+     * Get the current grid data from the API.
+     * @returns A promise that resolves to the current grid data.
+     */
     static getCurrentGrid() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -106,46 +89,70 @@ class MegaverseService {
                 if (!mapData) {
                     throw new Error("Failed to retrieve the current map data.");
                 }
-                // Check if the position is already occupied
-                let response;
-                // let isOcupied = await this.isOccupied(0, shapeReq, mapData);
-                // Make a different API call depending on the request type with a conditional
+                // Refactored into separate methods for clarity
                 if ("color" in shapeReq &&
                     !(yield this.isOccupied(1, shapeReq, mapData))) {
-                    response = yield axios_1.default.post(this.SOLOONS_URL, shapeReq, {
-                        headers: this.HEADERS
-                    });
-                    if (response.status === 200) {
-                        console.log(`Successfully placed soloon (${shapeReq.row}, ${shapeReq.column})`);
-                    }
-                    else {
-                        console.error(`Failed to place soloon: ${response.status}`);
-                    }
+                    yield this.placeSoloon(shapeReq);
                 }
                 else if ("direction" in shapeReq &&
                     !(yield this.isOccupied(2, shapeReq, mapData))) {
-                    response = yield axios_1.default.post(this.COMETH_URL, shapeReq, {
-                        headers: this.HEADERS
-                    });
-                    if (response.status === 200) {
-                        console.log(`Successfully placed cometh (${shapeReq.row}, ${shapeReq.column})`);
-                    }
-                    else {
-                        console.error(`Failed to place cometh: ${response.status}`);
-                    }
+                    yield this.placeCometh(shapeReq);
                 }
                 else if (!(yield this.isOccupied(0, shapeReq, mapData))) {
-                    response = yield axios_1.default.post(this.POLYANET_URL, shapeReq, {
-                        headers: this.HEADERS
-                    });
-                    if (response.status === 200) {
-                        console.log(`Successfully placed polyanet (${shapeReq.row}, ${shapeReq.column})`);
-                    }
-                    else {
-                        console.error(`Failed to place polyanet: ${response.status}`);
-                    }
+                    yield this.placePolyanet(shapeReq);
                 }
             }));
+        });
+    }
+    /**
+     * Place a soloon on the grid.
+     * @param request - The request data for the soloon.
+     */
+    static placeSoloon(request) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield axios_1.default.post(this.SOLOONS_URL, request, {
+                headers: this.HEADERS
+            });
+            if (response.status === 200) {
+                console.log(`Successfully placed soloon (${request.row}, ${request.column})`);
+            }
+            else {
+                console.error(`Failed to place soloon: ${response.status}`);
+            }
+        });
+    }
+    /**
+     * Place a cometh on the grid.
+     * @param request - The request data for the cometh.
+     */
+    static placeCometh(request) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield axios_1.default.post(this.COMETH_URL, request, {
+                headers: this.HEADERS
+            });
+            if (response.status === 200) {
+                console.log(`Successfully placed cometh (${request.row}, ${request.column})`);
+            }
+            else {
+                console.error(`Failed to place cometh: ${response.status}`);
+            }
+        });
+    }
+    /**
+     * Place a polyanet on the grid.
+     * @param request - The request data for the polyanet.
+     */
+    static placePolyanet(request) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield axios_1.default.post(this.POLYANET_URL, request, {
+                headers: this.HEADERS
+            });
+            if (response.status === 200) {
+                console.log(`Successfully placed polyanet (${request.row}, ${request.column})`);
+            }
+            else {
+                console.error(`Failed to place polyanet: ${response.status}`);
+            }
         });
     }
     /**
@@ -161,8 +168,6 @@ class MegaverseService {
                     throw new Error("Failed to retrieve the current map data.");
                 }
                 if (!(yield this.isOccupied(null, drawPolyanetRequest, mapData))) {
-                    // skip if the position is already empty
-                    console.log(`Skipping...position already has a SPACE: (${row}, ${column})`);
                     return;
                 }
                 const response = yield axios_1.default.delete(this.POLYANET_URL, {
@@ -221,9 +226,16 @@ class MegaverseService {
     }
 }
 exports.MegaverseService = MegaverseService;
-MegaverseService.POLYANET_URL = "https://challenge.crossmint.io/api/polyanets";
-MegaverseService.SOLOONS_URL = "https://challenge.crossmint.io/api/soloons";
-MegaverseService.COMETH_URL = "https://challenge.crossmint.io/api/comeths";
-MegaverseService.MAP_URL = `https://challenge.crossmint.io/api/map/${config_1.CANDIDATE_ID}`;
-MegaverseService.GOAL_MAP_URL = `https://challenge.crossmint.io/api/map/${config_1.CANDIDATE_ID}/goal`;
+_a = MegaverseService;
+MegaverseService.CROSS_URL = `https://challenge.crossmint.io/api`;
+MegaverseService.POLYANET_URL = `${_a.CROSS_URL}/polyanets`;
+// "https://challenge.crossmint.io/api/polyanets";
+MegaverseService.SOLOONS_URL = `${_a.CROSS_URL}/soloons`;
+// "https://challenge.crossmint.io/api/soloons";
+MegaverseService.COMETH_URL = `${_a.CROSS_URL}/comeths`;
+// "https://challenge.crossmint.io/api/comeths";
+MegaverseService.MAP_URL = `${_a.CROSS_URL}/map/${config_1.CANDIDATE_ID}`;
+// `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}`;
+MegaverseService.GOAL_MAP_URL = `${_a.CROSS_URL}/map/${config_1.CANDIDATE_ID}/goal`;
+// `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}/goal`;
 MegaverseService.HEADERS = { "Content-Type": "application/json" };

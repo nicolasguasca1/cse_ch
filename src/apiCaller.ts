@@ -64,52 +64,31 @@ interface DrawComethRequest {
  * Service for interacting with the Polyanet API.
  */
 class MegaverseService {
-  private static readonly POLYANET_URL =
-    "https://challenge.crossmint.io/api/polyanets";
-  private static readonly SOLOONS_URL =
-    "https://challenge.crossmint.io/api/soloons";
-  private static readonly COMETH_URL =
-    "https://challenge.crossmint.io/api/comeths";
-  private static readonly MAP_URL = `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}`;
-  private static readonly GOAL_MAP_URL = `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}/goal`;
+  private static readonly CROSS_URL = `https://challenge.crossmint.io/api`;
+  private static readonly POLYANET_URL = `${this.CROSS_URL}/polyanets`;
+  // "https://challenge.crossmint.io/api/polyanets";
+  private static readonly SOLOONS_URL = `${this.CROSS_URL}/soloons`;
+  // "https://challenge.crossmint.io/api/soloons";
+  private static readonly COMETH_URL = `${this.CROSS_URL}/comeths`;
+  // "https://challenge.crossmint.io/api/comeths";
+  private static readonly MAP_URL = `${this.CROSS_URL}/map/${CANDIDATE_ID}`;
+  // `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}`;
+  private static readonly GOAL_MAP_URL = `${this.CROSS_URL}/map/${CANDIDATE_ID}/goal`;
+  // `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}/goal`;
   private static readonly HEADERS = { "Content-Type": "application/json" };
 
-  // // Type guard function to check if the parameter is of the type DrawSoloonRequest
-  // static isDrawSoloon(
-  //   request: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest
-  // ): request is DrawPolyanetRequest {
-  //   return (
-  //     (request as DrawSoloonRequest).color !== undefined &&
-  //     (request as DrawSoloonRequest).row !== undefined &&
-  //     (request as DrawSoloonRequest).column !== undefined
-  //   );
-  // }
-
-  // // Type guard function to check if the parameter is of the type DrawComethRequest
-  // static isDrawCometh(
-  //   request: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest
-  // ): request is DrawPolyanetRequest {
-  //   return (
-  //     (request as DrawComethRequest).direction !== undefined &&
-  //     (request as DrawComethRequest).row !== undefined &&
-  //     (request as DrawComethRequest).column !== undefined
-  //   );
-  // }
-
   /**
-   * Checks if a certain value already exists in the given position.
-   * @param position - The position to check.
-   * @returns A boolean indicating whether the position is already occupied.
+   * Check if a specific position is occupied.
+   * @param type - The type of object to check.
+   * @param shapeReq - The request data containing row and column.
+   * @param mapData - The current map data.
+   * @returns A promise that resolves to a boolean indicating if the position is occupied.
    */
   static async isOccupied(
     type: number | null,
     shapeReq: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest,
     mapData: MapData
   ): Promise<boolean> {
-    // Implement the logic here to check if the position is occupied
-    // This could involve making another API call or querying a database
-    // For demonstration purposes, let's assume it always returns false
-    // currentGrid = getCurrentGrid();
     const { row, column } = shapeReq;
     if (
       row === null ||
@@ -139,7 +118,7 @@ class MegaverseService {
       return true;
     } else if (type === null && typeGrid === null) {
       console.log(
-        `Skipping...position already has a Cometh: (${row}, ${column})`
+        `Skipping...position already has a Space: (${row}, ${column})`
       );
       return true;
     } else {
@@ -147,6 +126,10 @@ class MegaverseService {
     }
   }
 
+  /**
+   * Get the current grid data from the API.
+   * @returns A promise that resolves to the current grid data.
+   */
   static async getCurrentGrid(): Promise<MapData | null> {
     try {
       const response = await axios.get(this.MAP_URL);
@@ -170,51 +153,73 @@ class MegaverseService {
       if (!mapData) {
         throw new Error("Failed to retrieve the current map data.");
       }
-      // Check if the position is already occupied
-      let response;
-      // let isOcupied = await this.isOccupied(0, shapeReq, mapData);
-      // Make a different API call depending on the request type with a conditional
+
+      // Refactored into separate methods for clarity
       if (
         "color" in shapeReq &&
         !(await this.isOccupied(1, shapeReq, mapData))
       ) {
-        response = await axios.post(this.SOLOONS_URL, shapeReq, {
-          headers: this.HEADERS
-        });
-        if (response.status === 200) {
-          console.log(
-            `Successfully placed soloon (${shapeReq.row}, ${shapeReq.column})`
-          );
-        } else {
-          console.error(`Failed to place soloon: ${response.status}`);
-        }
+        await this.placeSoloon(shapeReq);
       } else if (
         "direction" in shapeReq &&
         !(await this.isOccupied(2, shapeReq, mapData))
       ) {
-        response = await axios.post(this.COMETH_URL, shapeReq, {
-          headers: this.HEADERS
-        });
-        if (response.status === 200) {
-          console.log(
-            `Successfully placed cometh (${shapeReq.row}, ${shapeReq.column})`
-          );
-        } else {
-          console.error(`Failed to place cometh: ${response.status}`);
-        }
+        await this.placeCometh(shapeReq);
       } else if (!(await this.isOccupied(0, shapeReq, mapData))) {
-        response = await axios.post(this.POLYANET_URL, shapeReq, {
-          headers: this.HEADERS
-        });
-        if (response.status === 200) {
-          console.log(
-            `Successfully placed polyanet (${shapeReq.row}, ${shapeReq.column})`
-          );
-        } else {
-          console.error(`Failed to place polyanet: ${response.status}`);
-        }
+        await this.placePolyanet(shapeReq);
       }
     });
+  }
+
+  /**
+   * Place a soloon on the grid.
+   * @param request - The request data for the soloon.
+   */
+  private static async placeSoloon(request: DrawSoloonRequest) {
+    const response = await axios.post(this.SOLOONS_URL, request, {
+      headers: this.HEADERS
+    });
+    if (response.status === 200) {
+      console.log(
+        `Successfully placed soloon (${request.row}, ${request.column})`
+      );
+    } else {
+      console.error(`Failed to place soloon: ${response.status}`);
+    }
+  }
+
+  /**
+   * Place a cometh on the grid.
+   * @param request - The request data for the cometh.
+   */
+  private static async placeCometh(request: DrawComethRequest) {
+    const response = await axios.post(this.COMETH_URL, request, {
+      headers: this.HEADERS
+    });
+    if (response.status === 200) {
+      console.log(
+        `Successfully placed cometh (${request.row}, ${request.column})`
+      );
+    } else {
+      console.error(`Failed to place cometh: ${response.status}`);
+    }
+  }
+
+  /**
+   * Place a polyanet on the grid.
+   * @param request - The request data for the polyanet.
+   */
+  private static async placePolyanet(request: DrawPolyanetRequest) {
+    const response = await axios.post(this.POLYANET_URL, request, {
+      headers: this.HEADERS
+    });
+    if (response.status === 200) {
+      console.log(
+        `Successfully placed polyanet (${request.row}, ${request.column})`
+      );
+    } else {
+      console.error(`Failed to place polyanet: ${response.status}`);
+    }
   }
 
   /**
@@ -231,10 +236,6 @@ class MegaverseService {
         throw new Error("Failed to retrieve the current map data.");
       }
       if (!(await this.isOccupied(null, drawPolyanetRequest, mapData))) {
-        // skip if the position is already empty
-        console.log(
-          `Skipping...position already has a SPACE: (${row}, ${column})`
-        );
         return;
       }
       const response = await axios.delete(this.POLYANET_URL, {
