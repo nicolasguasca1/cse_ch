@@ -47,7 +47,6 @@ class GridManager {
                     "PURPLE_SOLOON",
                     "RED_SOLOON"
                 ].includes(value) &&
-                    // typeGrid !== 1
                     colorGrid !== value.split("_")[0].toLowerCase()) {
                     drawSoloonRequests.push({
                         _id: config_1.MAP_ID,
@@ -58,7 +57,6 @@ class GridManager {
                     });
                 }
                 else if (["UP_COMETH", "DOWN_COMETH", "LEFT_COMETH", "RIGHT_COMETH"].includes(value) &&
-                    // typeGrid !== 2 &&
                     directionGrid !== value.split("_")[0].toLowerCase()) {
                     drawComethRequests.push({
                         _id: config_1.MAP_ID,
