@@ -11,8 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const apiCaller_1 = require("./apiCaller");
 const config_1 = require("./config");
-// type CharacterType = "p" | "s" | "c";
-// const GRID_SIZE = 11;
 /**
  * Manager for grid operations including drawing and deleting positions.
  */
@@ -24,7 +22,7 @@ class GridManager {
      * @returns An object containing arrays of requests for each type of object.
      */
     static processGoalData(goalGrid, mapData) {
-        var _a;
+        var _a, _b, _c;
         const drawPolyRequests = [];
         const drawSoloonRequests = [];
         const drawComethRequests = [];
@@ -32,6 +30,8 @@ class GridManager {
         for (let i = 0; i < goalGrid.length; i++) {
             for (let j = 0; j < goalGrid[i].length; j++) {
                 const typeGrid = (_a = mapData.content[i][j]) === null || _a === void 0 ? void 0 : _a.type;
+                const directionGrid = (_b = mapData.content[i][j]) === null || _b === void 0 ? void 0 : _b.direction;
+                const colorGrid = (_c = mapData.content[i][j]) === null || _c === void 0 ? void 0 : _c.color;
                 const value = goalGrid[i][j];
                 if (value === "POLYANET" && typeGrid !== 0) {
                     drawPolyRequests.push({
@@ -47,7 +47,8 @@ class GridManager {
                     "PURPLE_SOLOON",
                     "RED_SOLOON"
                 ].includes(value) &&
-                    typeGrid !== 1) {
+                    // typeGrid !== 1
+                    colorGrid !== value.split("_")[0].toLowerCase()) {
                     drawSoloonRequests.push({
                         _id: config_1.MAP_ID,
                         row: i,
@@ -57,7 +58,8 @@ class GridManager {
                     });
                 }
                 else if (["UP_COMETH", "DOWN_COMETH", "LEFT_COMETH", "RIGHT_COMETH"].includes(value) &&
-                    typeGrid !== 2) {
+                    // typeGrid !== 2 &&
+                    directionGrid !== value.split("_")[0].toLowerCase()) {
                     drawComethRequests.push({
                         _id: config_1.MAP_ID,
                         row: i,
@@ -93,38 +95,14 @@ function main() {
             const mapData = yield apiCaller_1.MegaverseService.getCurrentGrid();
             const goalGrid = yield apiCaller_1.MegaverseService.getGoalGrid();
             const { drawPolyRequests, drawSoloonRequests, drawComethRequests, deleteRequests } = GridManager.processGoalData(goalGrid, mapData);
-            // console.log("drawPolyRequests:", drawPolyRequests);
-            // console.log("drawSoloonRequests:", drawSoloonRequests);
-            // console.log("drawComethRequests:", drawComethRequests);
-            // console.log("deleteRequests:", deleteRequests);
-            // return;
-            // for (const requestDelete of deleteRequests) {
-            //   await MegaverseService.makeDeleteApiCall(requestDelete);
-            //   await GridManager.delay(DELAY_MS);
-            // }
-            // for (const requestPoly of drawPolyRequests) {
-            //   await MegaverseService.makeApiCall(requestPoly, mapData);
-            //   // await GridManager.delay(DELAY_MS);
-            // }
-            // for (const requestSoloon of drawSoloonRequests) {
-            //   await MegaverseService.makeApiCall(requestSoloon, mapData);
-            //   // await GridManager.delay(DELAY_MS);
-            // }
-            // for (const requestCometh of drawComethRequests) {
-            //   await MegaverseService.makeApiCall(requestCometh, mapData);
-            //   // await GridManager.delay(DELAY_MS);
-            // }
             // Helper function to process requests sequentially
             const processRequestsSequentially = (requests, apiCallFn) => __awaiter(this, void 0, void 0, function* () {
                 for (const request of requests) {
                     yield apiCallFn(request, mapData);
                 }
             });
-            // // Execute deleteRequests
-            // await processRequestsSequentially(
-            //   deleteRequests,
-            //   MegaverseService.makeDeleteApiCall
-            // );
+            // Execute deleteRequests
+            yield processRequestsSequentially(deleteRequests, (request) => apiCaller_1.MegaverseService.makeDeleteApiCall(request, mapData));
             // Execute drawPolyRequests
             yield processRequestsSequentially(drawPolyRequests, (request) => apiCaller_1.MegaverseService.makeApiCall(request, mapData));
             // Execute drawSoloonRequests

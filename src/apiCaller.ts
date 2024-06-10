@@ -3,6 +3,7 @@ import { CANDIDATE_ID, MAP_ID } from "./config";
 
 interface MapContentItem {
   type: number;
+  direction?: string;
   color?: string;
 }
 
@@ -74,15 +75,10 @@ class MegaverseService {
   private static readonly DELAY_MS = DELAY_MS;
   private static readonly CROSS_URL = `https://challenge.crossmint.io/api`;
   private static readonly POLYANET_URL = `${this.CROSS_URL}/polyanets`;
-  // "https://challenge.crossmint.io/api/polyanets";
   private static readonly SOLOONS_URL = `${this.CROSS_URL}/soloons`;
-  // "https://challenge.crossmint.io/api/soloons";
   private static readonly COMETH_URL = `${this.CROSS_URL}/comeths`;
-  // "https://challenge.crossmint.io/api/comeths";
   private static readonly MAP_URL = `${this.CROSS_URL}/map/${CANDIDATE_ID}`;
-  // `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}`;
   private static readonly GOAL_MAP_URL = `${this.CROSS_URL}/map/${CANDIDATE_ID}/goal`;
-  // `https://challenge.crossmint.io/api/map/${CANDIDATE_ID}/goal`;
   private static readonly HEADERS = { "Content-Type": "application/json" };
 
   /**
@@ -107,17 +103,10 @@ class MegaverseService {
     mapData: MapData
   ): Promise<boolean> {
     const { row, column } = shapeReq;
-    if (
-      row === null ||
-      column === null
-      // !mapData.content[row] ||
-      // !mapData.content[row][column]
-    ) {
+    if (row === null || column === null) {
       console.log("Skipping...position is out of bounds");
       return false;
     }
-    // const row = shapeReq.row;
-    // const column = shapeReq.column;
     const typeGrid = mapData.content[row][column]?.type;
     if (type === 0 && typeGrid === 0) {
       console.log(
@@ -134,11 +123,7 @@ class MegaverseService {
         `Skipping...position already has a Cometh: (${row}, ${column})`
       );
       return true;
-    } else if (
-      type === undefined
-      // &&
-      // mapData.content[row][column] === undefined
-    ) {
+    } else if (type === undefined) {
       console.log(
         `Skipping...position already has a Space: (${row}, ${column})`
       );
@@ -172,20 +157,22 @@ class MegaverseService {
     mapData: MapData | null
   ): Promise<void> {
     await this.retry(async () => {
-      // const mapData = await this.getCurrentGrid();
       if (!mapData) {
         throw new Error("Failed to retrieve the current map data.");
       }
-
       // Refactored into separate methods for clarity
       if (
-        "color" in shapeReq &&
-        !(await this.isOccupied(1, shapeReq, mapData))
+        "color" in shapeReq
+        //   &&
+        //   !(await this.isOccupied(1, shapeReq, mapData)
+        // )
       ) {
         await this.placeSoloon(shapeReq);
       } else if (
-        "direction" in shapeReq &&
-        !(await this.isOccupied(2, shapeReq, mapData))
+        "direction" in shapeReq
+        //   &&
+        //   !(await this.isOccupied(2, shapeReq, mapData)
+        // )
       ) {
         await this.placeCometh(shapeReq);
       } else if (!(await this.isOccupied(0, shapeReq, mapData))) {
@@ -252,31 +239,6 @@ class MegaverseService {
    * Makes an API call to delete a Polyanet.
    * @param drawPolyanetRequest - The draw request object containing position and candidate information.
    */
-  // static async makeDeleteApiCall(
-  //   drawPolyanetRequest: DrawPolyanetRequest
-  // ): Promise<void> {
-  //   await this.retry(async () => {
-  //     const { row, column } = drawPolyanetRequest;
-  //     const mapData = await this.getCurrentGrid();
-  //     if (!mapData) {
-  //       throw new Error("Failed to retrieve the current map data.");
-  //     }
-  //     if (!(await this.isOccupied(null, drawPolyanetRequest, mapData))) {
-  //       return;
-  //     }
-  //     const response = await axios.delete(this.POLYANET_URL, {
-  //       data: drawPolyanetRequest,
-  //       headers: this.HEADERS
-  //     });
-  //     if (response.status === 200) {
-  //       console.log(
-  //         `Successfully deleted (${drawPolyanetRequest.row}, ${drawPolyanetRequest.column})`
-  //       );
-  //     } else {
-  //       console.error(`Failed to delete character: ${response.status}`);
-  //     }
-  //   });
-  // }
 
   static async makeDeleteApiCall(
     drawRequest: DrawPolyanetRequest,
@@ -310,11 +272,6 @@ class MegaverseService {
         type = undefined; // Space
       } else {
         type = 0; // Polyanet
-      }
-
-      if (!(await this.isOccupied(type, drawRequest, mapData))) {
-        console.log("Exiting...position is not occupied");
-        return;
       }
 
       let deleteUrl = "";

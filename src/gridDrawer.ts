@@ -10,10 +10,6 @@ import {
 } from "./apiCaller";
 import { CANDIDATE_ID, MAP_ID } from "./config";
 
-// type CharacterType = "p" | "s" | "c";
-
-// const GRID_SIZE = 11;
-
 /**
  * Manager for grid operations including drawing and deleting positions.
  */
@@ -42,6 +38,9 @@ class GridManager {
     for (let i = 0; i < goalGrid.length; i++) {
       for (let j = 0; j < goalGrid[i].length; j++) {
         const typeGrid: number | undefined = mapData!.content[i][j]?.type;
+        const directionGrid: string | undefined =
+          mapData!.content[i][j]?.direction;
+        const colorGrid: string | undefined = mapData!.content[i][j]?.color;
         const value = goalGrid[i][j];
         if (value === "POLYANET" && typeGrid !== 0) {
           drawPolyRequests.push({
@@ -57,7 +56,7 @@ class GridManager {
             "PURPLE_SOLOON",
             "RED_SOLOON"
           ].includes(value) &&
-          typeGrid !== 1
+          colorGrid !== value.split("_")[0].toLowerCase()
         ) {
           drawSoloonRequests.push({
             _id: MAP_ID,
@@ -70,7 +69,7 @@ class GridManager {
           ["UP_COMETH", "DOWN_COMETH", "LEFT_COMETH", "RIGHT_COMETH"].includes(
             value
           ) &&
-          typeGrid !== 2
+          directionGrid !== value.split("_")[0].toLowerCase()
         ) {
           drawComethRequests.push({
             _id: MAP_ID,
@@ -112,32 +111,6 @@ async function main(): Promise<void> {
       deleteRequests
     } = GridManager.processGoalData(goalGrid, mapData!);
 
-    // console.log("drawPolyRequests:", drawPolyRequests);
-    // console.log("drawSoloonRequests:", drawSoloonRequests);
-    // console.log("drawComethRequests:", drawComethRequests);
-    // console.log("deleteRequests:", deleteRequests);
-    // return;
-
-    // for (const requestDelete of deleteRequests) {
-    //   await MegaverseService.makeDeleteApiCall(requestDelete);
-    //   await GridManager.delay(DELAY_MS);
-    // }
-
-    // for (const requestPoly of drawPolyRequests) {
-    //   await MegaverseService.makeApiCall(requestPoly, mapData);
-    //   // await GridManager.delay(DELAY_MS);
-    // }
-
-    // for (const requestSoloon of drawSoloonRequests) {
-    //   await MegaverseService.makeApiCall(requestSoloon, mapData);
-    //   // await GridManager.delay(DELAY_MS);
-    // }
-
-    // for (const requestCometh of drawComethRequests) {
-    //   await MegaverseService.makeApiCall(requestCometh, mapData);
-    //   // await GridManager.delay(DELAY_MS);
-    // }
-
     // Helper function to process requests sequentially
     const processRequestsSequentially = async (
       requests: any[],
@@ -148,11 +121,10 @@ async function main(): Promise<void> {
       }
     };
 
-    // // Execute deleteRequests
-    // await processRequestsSequentially(
-    //   deleteRequests,
-    //   MegaverseService.makeDeleteApiCall
-    // );
+    // Execute deleteRequests
+    await processRequestsSequentially(deleteRequests, (request) =>
+      MegaverseService.makeDeleteApiCall(request, mapData)
+    );
 
     // Execute drawPolyRequests
     await processRequestsSequentially(drawPolyRequests, (request) =>
