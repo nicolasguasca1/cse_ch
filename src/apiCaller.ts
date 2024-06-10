@@ -60,10 +60,18 @@ interface DrawComethRequest {
   candidateId: string;
 }
 
+type DeleteRequest = {
+  characterType: "POLYANET" | "SOLOON" | "COMETH";
+  request: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest;
+};
+
+const DELAY_MS = 1000;
+
 /**
  * Service for interacting with the Polyanet API.
  */
 class MegaverseService {
+  private static readonly DELAY_MS = DELAY_MS;
   private static readonly CROSS_URL = `https://challenge.crossmint.io/api`;
   private static readonly POLYANET_URL = `${this.CROSS_URL}/polyanets`;
   // "https://challenge.crossmint.io/api/polyanets";
@@ -78,6 +86,15 @@ class MegaverseService {
   private static readonly HEADERS = { "Content-Type": "application/json" };
 
   /**
+   * Delays execution for a specified number of milliseconds.
+   * @param ms - The number of milliseconds to delay.
+   * @returns A promise that resolves after the specified delay.
+   */
+  static async delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
    * Check if a specific position is occupied.
    * @param type - The type of object to check.
    * @param shapeReq - The request data containing row and column.
@@ -85,17 +102,18 @@ class MegaverseService {
    * @returns A promise that resolves to a boolean indicating if the position is occupied.
    */
   static async isOccupied(
-    type: number | null,
+    type: number | undefined,
     shapeReq: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest,
     mapData: MapData
   ): Promise<boolean> {
     const { row, column } = shapeReq;
     if (
       row === null ||
-      column === null ||
-      !mapData.content[row] ||
-      !mapData.content[row][column]
+      column === null
+      // !mapData.content[row] ||
+      // !mapData.content[row][column]
     ) {
+      console.log("Skipping...position is out of bounds");
       return false;
     }
     // const row = shapeReq.row;
@@ -116,7 +134,11 @@ class MegaverseService {
         `Skipping...position already has a Cometh: (${row}, ${column})`
       );
       return true;
-    } else if (type === null && typeGrid === null) {
+    } else if (
+      type === undefined
+      // &&
+      // mapData.content[row][column] === undefined
+    ) {
       console.log(
         `Skipping...position already has a Space: (${row}, ${column})`
       );
@@ -146,10 +168,11 @@ class MegaverseService {
    * @param shapeReq - The draw request object containing position and candidate information.
    */
   static async makeApiCall(
-    shapeReq: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest
+    shapeReq: DrawPolyanetRequest | DrawSoloonRequest | DrawComethRequest,
+    mapData: MapData | null
   ): Promise<void> {
     await this.retry(async () => {
-      const mapData = await this.getCurrentGrid();
+      // const mapData = await this.getCurrentGrid();
       if (!mapData) {
         throw new Error("Failed to retrieve the current map data.");
       }
@@ -176,6 +199,7 @@ class MegaverseService {
    * @param request - The request data for the soloon.
    */
   private static async placeSoloon(request: DrawSoloonRequest) {
+    await this.delay(DELAY_MS);
     const response = await axios.post(this.SOLOONS_URL, request, {
       headers: this.HEADERS
     });
@@ -193,6 +217,7 @@ class MegaverseService {
    * @param request - The request data for the cometh.
    */
   private static async placeCometh(request: DrawComethRequest) {
+    await this.delay(DELAY_MS);
     const response = await axios.post(this.COMETH_URL, request, {
       headers: this.HEADERS
     });
@@ -210,6 +235,7 @@ class MegaverseService {
    * @param request - The request data for the polyanet.
    */
   private static async placePolyanet(request: DrawPolyanetRequest) {
+    await this.delay(DELAY_MS);
     const response = await axios.post(this.POLYANET_URL, request, {
       headers: this.HEADERS
     });
@@ -226,25 +252,88 @@ class MegaverseService {
    * Makes an API call to delete a Polyanet.
    * @param drawPolyanetRequest - The draw request object containing position and candidate information.
    */
+  // static async makeDeleteApiCall(
+  //   drawPolyanetRequest: DrawPolyanetRequest
+  // ): Promise<void> {
+  //   await this.retry(async () => {
+  //     const { row, column } = drawPolyanetRequest;
+  //     const mapData = await this.getCurrentGrid();
+  //     if (!mapData) {
+  //       throw new Error("Failed to retrieve the current map data.");
+  //     }
+  //     if (!(await this.isOccupied(null, drawPolyanetRequest, mapData))) {
+  //       return;
+  //     }
+  //     const response = await axios.delete(this.POLYANET_URL, {
+  //       data: drawPolyanetRequest,
+  //       headers: this.HEADERS
+  //     });
+  //     if (response.status === 200) {
+  //       console.log(
+  //         `Successfully deleted (${drawPolyanetRequest.row}, ${drawPolyanetRequest.column})`
+  //       );
+  //     } else {
+  //       console.error(`Failed to delete character: ${response.status}`);
+  //     }
+  //   });
+  // }
+
   static async makeDeleteApiCall(
-    drawPolyanetRequest: DrawPolyanetRequest
+    drawRequest: DrawPolyanetRequest,
+    mapData: MapData | null
   ): Promise<void> {
     await this.retry(async () => {
-      const { row, column } = drawPolyanetRequest;
-      const mapData = await this.getCurrentGrid();
+      // const mapData = await this.getCurrentGrid();
       if (!mapData) {
         throw new Error("Failed to retrieve the current map data.");
       }
-      if (!(await this.isOccupied(null, drawPolyanetRequest, mapData))) {
+      const { row, column } = drawRequest;
+      if (
+        row === null ||
+        column === null ||
+        row >= mapData.content.length ||
+        column >= mapData.content[row].length
+        // !mapData.content[row][column]
+      ) {
+        console.log("Exiting...position is out of bounds");
+        return false;
+      }
+      const typeFromMap = mapData.content[row][column]?.type;
+      console.log("typeFromMap is:" + typeFromMap);
+
+      let type: number | undefined = undefined;
+      if ("color" in drawRequest) {
+        type = 1; // Soloon
+      } else if ("direction" in drawRequest) {
+        type = 2; // Cometh
+      } else if (mapData.content[row][column]?.type === undefined) {
+        type = undefined; // Space
+      } else {
+        type = 0; // Polyanet
+      }
+
+      if (!(await this.isOccupied(type, drawRequest, mapData))) {
+        console.log("Exiting...position is not occupied");
         return;
       }
-      const response = await axios.delete(this.POLYANET_URL, {
-        data: drawPolyanetRequest,
+
+      let deleteUrl = "";
+      if (type === 0) {
+        deleteUrl = this.POLYANET_URL;
+      } else if (type === 1) {
+        deleteUrl = this.SOLOONS_URL;
+      } else if (type === 2) {
+        deleteUrl = this.COMETH_URL;
+      }
+      await this.delay(DELAY_MS);
+      const response = await axios.delete(deleteUrl, {
+        data: drawRequest,
         headers: this.HEADERS
       });
+      console.log("response status is:" + response.status);
       if (response.status === 200) {
         console.log(
-          `Successfully deleted (${drawPolyanetRequest.row}, ${drawPolyanetRequest.column})`
+          `Successfully deleted (${drawRequest.row}, ${drawRequest.column})`
         );
       } else {
         console.error(`Failed to delete character: ${response.status}`);
@@ -298,7 +387,9 @@ export {
   DrawPolyanetRequest,
   DrawSoloonRequest,
   DrawComethRequest,
+  DeleteRequest,
   ValueType,
   ColorType,
-  DirectionType
+  DirectionType,
+  MapData
 };
